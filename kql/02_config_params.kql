@@ -1,0 +1,28 @@
+// Initial values. Level names are in Spanish: advertencia = warning,
+// amarilla = yellow, naranja = orange, roja = red.
+.set-or-append at_config_params <|
+datatable(param_name: string, param_value: real) [
+    "vehicle_delay_threshold_seconds", 180,     // delayed minute / affected bus threshold
+    "alert_level_advertencia_minutes", 5,       // consecutive delayed minutes per level
+    "alert_level_amarilla_minutes", 10,
+    "alert_level_naranja_minutes", 15,
+    "alert_level_roja_minutes", 20,
+    "avg_delay_normalization_cap_seconds", 600, // magnitude reaches 1 at 10 min
+    "affected_vehicles_normalization_cap", 8,   // amplitude reaches 1 at 8 late buses
+    "severity_weight_magnitude", 0.5,
+    "severity_weight_amplitude", 0.3,
+    "severity_weight_trend", 0.2,
+    "trend_bonus_worsening", 1,
+    "trend_bonus_stable", 0,
+    "trend_bonus_improving", 0,
+    "trend_delta_seconds", 60,                  // delay change needed to count as worsening/improving
+    "trend_diff_threshold_seconds", 5,          // NOTE: used as MINUTES back for the trend comparison
+    "freshness_threshold_minutes", 5,           // no data for this long -> sin_datos (not reporting)
+    "stale_trip_threshold_minutes", 5           // trip not updated by AT for this long -> frozen
+]
+| extend updated_at = now()   // now(), never datetime(now())
+
+// Current values
+at_config_params
+| summarize arg_max(updated_at, param_value) by param_name
+| order by param_name asc

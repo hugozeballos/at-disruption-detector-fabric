@@ -1,0 +1,20 @@
+// Run in the KQL database `at-realtime-db`.
+
+// Raw data: one row per stop update, written by the Eventstream.
+.create table at_stop_updates_raw (
+    trip_id: string,
+    route_id: string,
+    stop_id: string,
+    vehicle_id: string,
+    arrival_delay_seconds: int,
+    departure_delay_seconds: int,
+    schedule_relationship: string,
+    feed_timestamp: datetime,       // when AT last updated the trip
+    ingestion_timestamp: datetime   // when the UDF polled it
+)
+
+// Key-value config: append a new row to change a value; queries read the latest one.
+.create table at_config_params (param_name: string, param_value: real, updated_at: datetime)
+
+// Stop names: created with Get data -> Local file -> stops.txt from AT's GTFS static zip
+// (format CSV, first row as header). Resulting table: at_stops_ref (stop_id, stop_name, ...).

@@ -1,0 +1,319 @@
+{
+  "$schema": "https://pbiadx.powerbi.com/static/d/schema/84/dashboard.json",
+  "id": "8816ff09-94f9-4b75-a8c9-cd11bd8b1d49",
+  "title": "at-disruption-dashboard",
+  "schema_version": 84,
+  "flavor": "RTDashboard_Regular",
+  "changeDetection": {
+    "kind": "liveUpdates",
+    "fallbackRefreshRate": "1m",
+    "minRefreshRate": "1m"
+  },
+  "tiles": [
+    {
+      "id": "76d6ff65-0243-476b-9753-5e0ada5580d5",
+      "title": "Top 16 routes on alert (by avg delay)",
+      "visualType": "multistat",
+      "pageId": "eeee8935-593f-4c8d-b57e-c7546af60a75",
+      "layout": {
+        "x": 0,
+        "y": 3,
+        "width": 15,
+        "height": 5
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "6a5efc80-1221-4f47-bfa3-f3cbd768526f"
+      },
+      "visualOptions": {
+        "multiStat__textSize": "small",
+        "multiStat__valueColumn": null,
+        "colorRulesDisabled": false,
+        "multiStat__displayOrientation": "horizontal",
+        "multiStat__labelColumn": null,
+        "multiStat__slot": {
+          "width": 5,
+          "height": 1
+        },
+        "colorRules": []
+      }
+    },
+    {
+      "id": "6d3a118b-d6a8-495a-8d1f-1353c1c47436",
+      "title": "Disruption details",
+      "visualType": "table",
+      "pageId": "eeee8935-593f-4c8d-b57e-c7546af60a75",
+      "layout": {
+        "x": 0,
+        "y": 8,
+        "width": 15,
+        "height": 4
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "d7eda431-871d-44e3-94b3-38827547b00f"
+      },
+      "visualOptions": {
+        "table__enableRenderLinks": true,
+        "colorRulesDisabled": true,
+        "crossFilterDisabled": false,
+        "drillthroughDisabled": true,
+        "crossFilter": [
+          {
+            "interaction": "column",
+            "property": "Route",
+            "parameterId": "addd0ac9-3785-4f74-a082-5dea7475c558",
+            "disabled": false
+          }
+        ],
+        "drillthrough": [],
+        "table__renderLinks": [],
+        "colorRules": []
+      }
+    },
+    {
+      "id": "ec8a9df6-d6af-4db6-869a-e56dce1abcce",
+      "title": "Stops with most delayed routes (last 5 min)",
+      "visualType": "column",
+      "pageId": "eeee8935-593f-4c8d-b57e-c7546af60a75",
+      "layout": {
+        "x": 15,
+        "y": 6,
+        "width": 9,
+        "height": 6
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "51a9789b-4bf0-4972-8c48-7e85ca73b67c"
+      },
+      "visualOptions": {
+        "multipleYAxes": {
+          "base": {
+            "id": "-1",
+            "label": "",
+            "columns": [],
+            "yAxisMaximumValue": null,
+            "yAxisMinimumValue": null,
+            "yAxisScale": "linear",
+            "horizontalLines": []
+          },
+          "additional": [],
+          "showMultiplePanels": false
+        },
+        "seriesColors": {},
+        "hideLegend": false,
+        "legendLocation": "bottom",
+        "xColumnTitle": "",
+        "xColumn": null,
+        "yColumns": null,
+        "seriesColumns": null,
+        "xAxisScale": "linear",
+        "verticalLine": "",
+        "crossFilterDisabled": false,
+        "drillthroughDisabled": true,
+        "forceAxisTicks": false,
+        "crossFilter": [
+          {
+            "interaction": "column",
+            "property": "Stop",
+            "parameterId": "feadf4e0-23e4-448f-9715-9fc23a61c62d",
+            "disabled": false
+          }
+        ],
+        "drillthrough": []
+      }
+    },
+    {
+      "id": "7e6caec9-94dc-469f-882f-dfa150732ec0",
+      "title": "Ingestion status",
+      "visualType": "multistat",
+      "pageId": "eeee8935-593f-4c8d-b57e-c7546af60a75",
+      "layout": {
+        "x": 0,
+        "y": 0,
+        "width": 15,
+        "height": 3
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "25dfe105-eae9-430b-a70c-8eff3d0416e8"
+      },
+      "visualOptions": {
+        "multiStat__textSize": "auto",
+        "multiStat__valueColumn": null,
+        "colorRulesDisabled": false,
+        "multiStat__displayOrientation": "horizontal",
+        "multiStat__labelColumn": null,
+        "multiStat__slot": {
+          "width": 4,
+          "height": 1
+        },
+        "colorRules": []
+      }
+    },
+    {
+      "id": "5880c63a-db58-4e9e-a6a6-bf89d23303a6",
+      "title": "How to read this dashboard",
+      "visualType": "markdownCard",
+      "pageId": "eeee8935-593f-4c8d-b57e-c7546af60a75",
+      "layout": {
+        "x": 15,
+        "y": 0,
+        "width": 9,
+        "height": 6
+      },
+      "markdownText": "\nA route is **on alert** when its average delay stays above **3 min** in consecutive readings (~1 per minute).\n\n**Small text = current avg delay** · **Big number = route**\n\n**Color = how long the route has been on alert:** 🔵 5–9 min · 🟡 10–14 · 🟠 15–19 · 🔴 20+\n\n**Dots = buses 3+ min late right now** (max 5)\n\nClick a bar in the stops chart to filter by stop · **Reset** (top right) to clear filters",
+      "visualOptions": {}
+    }
+  ],
+  "baseQueries": [],
+  "parameters": [
+    {
+      "kind": "duration",
+      "id": "a1c2f4b5-0dff-4d11-a2d7-3b101605cc92",
+      "displayName": "Intervalo de tiempo",
+      "description": "",
+      "beginVariableName": "_startTime",
+      "endVariableName": "_endTime",
+      "defaultValue": {
+        "kind": "dynamic",
+        "count": 1,
+        "unit": "hours"
+      },
+      "showOnPages": {
+        "kind": "all"
+      }
+    },
+    {
+      "kind": "string",
+      "id": "addd0ac9-3785-4f74-a082-5dea7475c558",
+      "displayName": "Route",
+      "description": "",
+      "variableName": "_route",
+      "selectionType": "scalar",
+      "includeAllOption": true,
+      "defaultValue": {
+        "kind": "all"
+      },
+      "dataSource": {
+        "kind": "query",
+        "columns": {
+          "value": "Route"
+        },
+        "queryRef": {
+          "kind": "query",
+          "queryId": "720e3444-77d4-4a7d-86b5-debf8552eb87"
+        }
+      },
+      "showOnPages": {
+        "kind": "all"
+      }
+    },
+    {
+      "kind": "string",
+      "id": "feadf4e0-23e4-448f-9715-9fc23a61c62d",
+      "displayName": "stop",
+      "description": "",
+      "variableName": "_stop",
+      "selectionType": "scalar",
+      "includeAllOption": true,
+      "defaultValue": {
+        "kind": "all"
+      },
+      "dataSource": {
+        "kind": "query",
+        "columns": {
+          "value": "Stop",
+          "label": "Stop"
+        },
+        "queryRef": {
+          "kind": "query",
+          "queryId": "17a0fd05-6e7e-470b-8de2-d6e2c41192a6"
+        }
+      },
+      "showOnPages": {
+        "kind": "all"
+      }
+    }
+  ],
+  "dataSources": [
+    {
+      "kind": "kusto-trident",
+      "clusterUri": "https://<your-eventhouse-query-uri>",
+      "name": "at-realtime-db",
+      "databaseArtifactId": "<your-kql-database-id>",
+      "database": "<your-kql-database-id>",
+      "workspace": "00000000-0000-0000-0000-000000000000",
+      "id": "e402bdbe-1aae-4d2d-9a33-07418900d8c0"
+    }
+  ],
+  "pages": [
+    {
+      "name": "Página 1",
+      "id": "eeee8935-593f-4c8d-b57e-c7546af60a75"
+    }
+  ],
+  "queries": [
+    {
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "e402bdbe-1aae-4d2d-9a33-07418900d8c0"
+      },
+      "text": "let umbral = toscalar(at_config_params\n    | where param_name == \"vehicle_delay_threshold_seconds\"\n    | summarize arg_max(updated_at, param_value)\n    | project todouble(param_value));\nlet rutas_del_paradero = at_recent_live_updates(5m)\n    | where coalesce(arrival_delay_seconds, departure_delay_seconds) >= umbral\n    | lookup kind=leftouter (at_stops_ref | project stop_id, stop_name) on stop_id\n    | where coalesce(stop_name, stop_id) == _stop\n    | distinct route_id;\nat_get_route_severity()\n| where is_active\n| where isempty(_stop) or route_id in (rutas_del_paradero)\n| extend nivel_orden = case(alert_level == \"roja\", 4, alert_level == \"naranja\", 3, alert_level == \"amarilla\", 2, 1)\n| extend icono = case(alert_level == \"roja\", \"🔴\", alert_level == \"naranja\", \"🟠\", alert_level == \"amarilla\", \"🟡\", \"🔵\")\n| extend puntos = strrep(icono, max_of(min_of(affected_vehicles, 5), 1))\n| order by nivel_orden desc, severity_score desc\n| take 16\n| order by nivel_orden desc, avg_delay_seconds desc\n| extend d = avg_delay_seconds\n| extend retraso = case(\n    d < 60,   strcat(tostring(toint(round(d, 0))), \" s\"),\n    d < 3600, strcat(tostring(round(d / 60.0, 1)), \" min\"),\n              strcat(tostring(toint(d / 3600)), \" h \", tostring(toint((d % 3600) / 60)), \" min\"))\n| project\n    Route = tostring(split(route_id, \"-\")[0]),\n    Delay = strcat(puntos, \"  \", retraso),\n    route_id",
+      "id": "6a5efc80-1221-4f47-bfa3-f3cbd768526f",
+      "usedVariables": [
+        "_stop"
+      ]
+    },
+    {
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "e402bdbe-1aae-4d2d-9a33-07418900d8c0"
+      },
+      "text": "let umbral = toscalar(at_config_params\n    | where param_name == \"vehicle_delay_threshold_seconds\"\n    | summarize arg_max(updated_at, param_value)\n    | project todouble(param_value));\nlet rutas_del_paradero = at_recent_live_updates(5m)\n    | where coalesce(arrival_delay_seconds, departure_delay_seconds) >= umbral\n    | lookup kind=leftouter (at_stops_ref | project stop_id, stop_name) on stop_id\n    | where coalesce(stop_name, stop_id) == _stop\n    | distinct route_id;\nlet paraderos = at_recent_live_updates(5m)\n    | where coalesce(arrival_delay_seconds, departure_delay_seconds) >= umbral\n    | lookup kind=leftouter (at_stops_ref | project stop_id, stop_name) on stop_id\n    | extend paradero = coalesce(stop_name, stop_id)\n    | summarize Paraderos = strcat_array(make_set(paradero, 5), \" · \") by route_id;\nat_get_route_severity()\n| where is_active\n| where isempty(_stop) or route_id in (rutas_del_paradero)\n| lookup kind=leftouter paraderos on route_id\n| extend s = signals_breakdown\n| extend mag = todouble(s.magnitude), amp = todouble(s.amplitude), tre = todouble(s.trend), racha = toint(s.consecutive_readings)\n| extend dominante = case(mag >= amp and mag >= tre, \"Magnitude\", amp >= tre, \"Amplitude\", \"Trend\")\n| extend nivel_orden = case(alert_level == \"roja\", 4, alert_level == \"naranja\", 3, alert_level == \"amarilla\", 2, 1)\n| order by nivel_orden desc, severity_score desc\n| project\n    Level = case(\n        alert_level == \"roja\", \"🔴 red\",\n        alert_level == \"naranja\", \"🟠 orange\",\n        alert_level == \"amarilla\", \"🟡 yellow\",\n        \"🔵 warning\"),\n    Route = tostring(split(route_id, \"-\")[0]),\n    ['Next stops (delayed buses)'] = Paraderos,\n    ['Avg delay (min)'] = round(avg_delay_seconds / 60.0, 1),\n    ['Affected vehicles'] = affected_vehicles,\n    Trend = case(\n        trend == \"estable\", \"stable\",\n        trend == \"empeorando\", \"worsening\",\n        trend == \"mejorando\", \"improving\",\n        trend),\n    ['Last reading'] = last_seen,\n    Severity = round(severity_score, 2),\n    ['Dominant signal'] = dominante,\n    Magnitude = round(mag, 3),\n    Amplitude = round(amp, 3),\n    ['Trend contribution'] = round(tre, 3),\n    ['Min. in alert (approx.)'] = iff(racha >= 30, \"30+\", tostring(racha)),\n    ['Route ID'] = route_id",
+      "id": "d7eda431-871d-44e3-94b3-38827547b00f",
+      "usedVariables": [
+        "_stop"
+      ]
+    },
+    {
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "e402bdbe-1aae-4d2d-9a33-07418900d8c0"
+      },
+      "text": "let umbral = toscalar(at_config_params\n    | where param_name == \"vehicle_delay_threshold_seconds\"\n    | summarize arg_max(updated_at, param_value)\n    | project todouble(param_value));\nlet activas = at_get_route_severity() | where is_active | project route_id;\nat_recent_live_updates(5m)\n| where route_id in (activas)\n| where isempty(_route) or tostring(split(route_id, \"-\")[0]) == _route\n| where coalesce(arrival_delay_seconds, departure_delay_seconds) >= umbral\n| summarize ['Delayed routes'] = dcount(route_id) by stop_id\n| lookup kind=leftouter (at_stops_ref | project stop_id, stop_name) on stop_id\n| extend Stop = coalesce(stop_name, stop_id)\n| top 10 by ['Delayed routes'] desc\n| project Stop, ['Delayed routes']",
+      "id": "51a9789b-4bf0-4972-8c48-7e85ca73b67c",
+      "usedVariables": [
+        "_route"
+      ]
+    },
+    {
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "e402bdbe-1aae-4d2d-9a33-07418900d8c0"
+      },
+      "text": "let r = at_get_route_severity();\nunion\n    (r | summarize Value = countif(alert_level != \"sin_datos\") | extend Indicator = \"Routes running now\", ord = 1),\n    (r | summarize Value = countif(is_active) | extend Indicator = \"Routes on alert\", ord = 2),\n    (r | summarize Value = countif(alert_level == \"sin_datos\") | extend Indicator = \"Routes not reporting (24h)\", ord = 3),\n    (r | summarize Value = datetime_diff('minute', now(), max(last_seen)) | extend Indicator = \"Min. since last reading\", ord = 4)\n| order by ord asc\n| project Indicator, Value",
+      "id": "25dfe105-eae9-430b-a70c-8eff3d0416e8",
+      "usedVariables": []
+    },
+    {
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "e402bdbe-1aae-4d2d-9a33-07418900d8c0"
+      },
+      "text": "at_get_route_severity()\n| where is_active\n| project route_id, Route = tostring(split(route_id, \"-\")[0])\n| order by Route asc",
+      "id": "720e3444-77d4-4a7d-86b5-debf8552eb87",
+      "usedVariables": []
+    },
+    {
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "e402bdbe-1aae-4d2d-9a33-07418900d8c0"
+      },
+      "text": "let umbral = toscalar(at_config_params\n    | where param_name == \"vehicle_delay_threshold_seconds\"\n    | summarize arg_max(updated_at, param_value)\n    | project todouble(param_value));\nat_recent_live_updates(5m)\n| where coalesce(arrival_delay_seconds, departure_delay_seconds) >= umbral\n| lookup kind=leftouter (at_stops_ref | project stop_id, stop_name) on stop_id\n| distinct Stop = coalesce(stop_name, stop_id)\n| order by Stop asc",
+      "id": "17a0fd05-6e7e-470b-8de2-d6e2c41192a6",
+      "usedVariables": []
+    }
+  ],
+  "embeddedApps": []
+}

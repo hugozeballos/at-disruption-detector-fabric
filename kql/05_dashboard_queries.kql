@@ -1,0 +1,121 @@
+// Queries behind each dashboard tile and parameter (from dashboard/at-disruption-dashboard.json).
+
+// ---- Tile: Top 16 routes on alert (by avg delay) (multistat) ----
+let umbral = toscalar(at_config_params
+    | where param_name == "vehicle_delay_threshold_seconds"
+    | summarize arg_max(updated_at, param_value)
+    | project todouble(param_value));
+let rutas_del_paradero = at_recent_live_updates(5m)
+    | where coalesce(arrival_delay_seconds, departure_delay_seconds) >= umbral
+    | lookup kind=leftouter (at_stops_ref | project stop_id, stop_name) on stop_id
+    | where coalesce(stop_name, stop_id) == _stop
+    | distinct route_id;
+at_get_route_severity()
+| where is_active
+| where isempty(_stop) or route_id in (rutas_del_paradero)
+| extend nivel_orden = case(alert_level == "roja", 4, alert_level == "naranja", 3, alert_level == "amarilla", 2, 1)
+| extend icono = case(alert_level == "roja", "🔴", alert_level == "naranja", "🟠", alert_level == "amarilla", "🟡", "🔵")
+| extend puntos = strrep(icono, max_of(min_of(affected_vehicles, 5), 1))
+| order by nivel_orden desc, severity_score desc
+| take 16
+| order by nivel_orden desc, avg_delay_seconds desc
+| extend d = avg_delay_seconds
+| extend retraso = case(
+    d < 60,   strcat(tostring(toint(round(d, 0))), " s"),
+    d < 3600, strcat(tostring(round(d / 60.0, 1)), " min"),
+              strcat(tostring(toint(d / 3600)), " h ", tostring(toint((d % 3600) / 60)), " min"))
+| project
+    Route = tostring(split(route_id, "-")[0]),
+    Delay = strcat(puntos, "  ", retraso),
+    route_id
+
+// ---- Tile: Disruption details (table) ----
+let umbral = toscalar(at_config_params
+    | where param_name == "vehicle_delay_threshold_seconds"
+    | summarize arg_max(updated_at, param_value)
+    | project todouble(param_value));
+let rutas_del_paradero = at_recent_live_updates(5m)
+    | where coalesce(arrival_delay_seconds, departure_delay_seconds) >= umbral
+    | lookup kind=leftouter (at_stops_ref | project stop_id, stop_name) on stop_id
+    | where coalesce(stop_name, stop_id) == _stop
+    | distinct route_id;
+let paraderos = at_recent_live_updates(5m)
+    | where coalesce(arrival_delay_seconds, departure_delay_seconds) >= umbral
+    | lookup kind=leftouter (at_stops_ref | project stop_id, stop_name) on stop_id
+    | extend paradero = coalesce(stop_name, stop_id)
+    | summarize Paraderos = strcat_array(make_set(paradero, 5), " · ") by route_id;
+at_get_route_severity()
+| where is_active
+| where isempty(_stop) or route_id in (rutas_del_paradero)
+| lookup kind=leftouter paraderos on route_id
+| extend s = signals_breakdown
+| extend mag = todouble(s.magnitude), amp = todouble(s.amplitude), tre = todouble(s.trend), racha = toint(s.consecutive_readings)
+| extend dominante = case(mag >= amp and mag >= tre, "Magnitude", amp >= tre, "Amplitude", "Trend")
+| extend nivel_orden = case(alert_level == "roja", 4, alert_level == "naranja", 3, alert_level == "amarilla", 2, 1)
+| order by nivel_orden desc, severity_score desc
+| project
+    Level = case(
+        alert_level == "roja", "🔴 red",
+        alert_level == "naranja", "🟠 orange",
+        alert_level == "amarilla", "🟡 yellow",
+        "🔵 warning"),
+    Route = tostring(split(route_id, "-")[0]),
+    ['Next stops (delayed buses)'] = Paraderos,
+    ['Avg delay (min)'] = round(avg_delay_seconds / 60.0, 1),
+    ['Affected vehicles'] = affected_vehicles,
+    Trend = case(
+        trend == "estable", "stable",
+        trend == "empeorando", "worsening",
+        trend == "mejorando", "improving",
+        trend),
+    ['Last reading'] = last_seen,
+    Severity = round(severity_score, 2),
+    ['Dominant signal'] = dominante,
+    Magnitude = round(mag, 3),
+    Amplitude = round(amp, 3),
+    ['Trend contribution'] = round(tre, 3),
+    ['Min. in alert (approx.)'] = iff(racha >= 30, "30+", tostring(racha)),
+    ['Route ID'] = route_id
+
+// ---- Tile: Stops with most delayed routes (last 5 min) (column) ----
+let umbral = toscalar(at_config_params
+    | where param_name == "vehicle_delay_threshold_seconds"
+    | summarize arg_max(updated_at, param_value)
+    | project todouble(param_value));
+let activas = at_get_route_severity() | where is_active | project route_id;
+at_recent_live_updates(5m)
+| where route_id in (activas)
+| where isempty(_route) or tostring(split(route_id, "-")[0]) == _route
+| where coalesce(arrival_delay_seconds, departure_delay_seconds) >= umbral
+| summarize ['Delayed routes'] = dcount(route_id) by stop_id
+| lookup kind=leftouter (at_stops_ref | project stop_id, stop_name) on stop_id
+| extend Stop = coalesce(stop_name, stop_id)
+| top 10 by ['Delayed routes'] desc
+| project Stop, ['Delayed routes']
+
+// ---- Tile: Ingestion status (multistat) ----
+let r = at_get_route_severity();
+union
+    (r | summarize Value = countif(alert_level != "sin_datos") | extend Indicator = "Routes running now", ord = 1),
+    (r | summarize Value = countif(is_active) | extend Indicator = "Routes on alert", ord = 2),
+    (r | summarize Value = countif(alert_level == "sin_datos") | extend Indicator = "Routes not reporting (24h)", ord = 3),
+    (r | summarize Value = datetime_diff('minute', now(), max(last_seen)) | extend Indicator = "Min. since last reading", ord = 4)
+| order by ord asc
+| project Indicator, Value
+
+// ---- Parameter: Route (_route) ----
+at_get_route_severity()
+| where is_active
+| project route_id, Route = tostring(split(route_id, "-")[0])
+| order by Route asc
+
+// ---- Parameter: stop (_stop) ----
+let umbral = toscalar(at_config_params
+    | where param_name == "vehicle_delay_threshold_seconds"
+    | summarize arg_max(updated_at, param_value)
+    | project todouble(param_value));
+at_recent_live_updates(5m)
+| where coalesce(arrival_delay_seconds, departure_delay_seconds) >= umbral
+| lookup kind=leftouter (at_stops_ref | project stop_id, stop_name) on stop_id
+| distinct Stop = coalesce(stop_name, stop_id)
+| order by Stop asc

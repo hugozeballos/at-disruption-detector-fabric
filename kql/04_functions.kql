@@ -1,0 +1,114 @@
+// Raw updates from live (not frozen) trips within a time window.
+.create-or-alter function at_recent_live_updates(window: timespan)
+{
+    let stale = toscalar(at_config_params
+        | where param_name == "stale_trip_threshold_minutes"
+        | summarize arg_max(updated_at, param_value)
+        | project param_value);
+    at_stop_updates_raw
+    | where ingestion_timestamp > now() - window
+    | where isnull(todatetime(feed_timestamp))
+        or datetime_diff('minute', ingestion_timestamp, todatetime(feed_timestamp)) <= stale
+}
+
+
+// Alert level, severity and trend for every route seen in the last 24 h.
+// Called by the dashboard on every refresh (it depends on now(), so it cannot be a materialized view).
+// Values are in Spanish: roja/naranja/amarilla/advertencia/ninguna/sin_datos,
+// empeorando (worsening) / mejorando (improving) / estable (stable).
+.create-or-alter function at_get_route_severity()
+{
+    let cfg = at_config_params
+        | summarize arg_max(updated_at, param_value) by param_name;
+    let delay_cap = toscalar(cfg | where param_name == "avg_delay_normalization_cap_seconds" | project param_value);
+    let vehicles_cap = toscalar(cfg | where param_name == "affected_vehicles_normalization_cap" | project param_value);
+    let vehicle_delay_threshold = toscalar(cfg | where param_name == "vehicle_delay_threshold_seconds" | project param_value);
+    let trend_diff_threshold = toscalar(cfg | where param_name == "trend_diff_threshold_seconds" | project param_value);
+    let trend_delta = toscalar(cfg | where param_name == "trend_delta_seconds" | project param_value);
+    let w_magnitude = toscalar(cfg | where param_name == "severity_weight_magnitude" | project param_value);
+    let w_trend = toscalar(cfg | where param_name == "severity_weight_trend" | project param_value);
+    let w_amplitude = toscalar(cfg | where param_name == "severity_weight_amplitude" | project param_value);
+    let bonus_worsening = toscalar(cfg | where param_name == "trend_bonus_worsening" | project param_value);
+    let bonus_stable = toscalar(cfg | where param_name == "trend_bonus_stable" | project param_value);
+    let bonus_improving = toscalar(cfg | where param_name == "trend_bonus_improving" | project param_value);
+    let min_advertencia = toscalar(cfg | where param_name == "alert_level_advertencia_minutes" | project param_value);
+    let min_amarilla = toscalar(cfg | where param_name == "alert_level_amarilla_minutes" | project param_value);
+    let min_naranja = toscalar(cfg | where param_name == "alert_level_naranja_minutes" | project param_value);
+    let min_roja = toscalar(cfg | where param_name == "alert_level_roja_minutes" | project param_value);
+    let freshness_threshold = toscalar(cfg | where param_name == "freshness_threshold_minutes" | project param_value);
+    let lookback_minutes = 30;
+    let now_bucket = bin(now(), 1m);
+    // every route seen in the last 24 h
+    let all_routes = at_route_minute_agg
+        | where minute_bucket > now_bucket - 24h
+        | summarize last_seen = max(minute_bucket) by route_id;
+    // current streak of delayed minutes, counting back from the latest one
+    let streaks = at_route_minute_agg
+        | where minute_bucket > now_bucket - lookback_minutes * 1m
+        | order by route_id asc, minute_bucket desc
+        | serialize
+        | extend is_delayed = avg_delay_seconds >= vehicle_delay_threshold
+        | extend broke_streak = iff(is_delayed, 0, 1)
+        | extend streak_group = row_cumsum(broke_streak, route_id != prev(route_id))
+        | where streak_group == 0 and is_delayed
+        | summarize
+            consecutive_delayed_readings = count(),
+            avg_delay_seconds = avg(avg_delay_seconds)
+        by route_id;
+    // buses late right now, from live (not frozen) trips
+    let affected_now = at_recent_live_updates(3m)
+        | where ingestion_timestamp >= now_bucket - 2m
+        | where arrival_delay_seconds >= vehicle_delay_threshold and isnotempty(vehicle_id)
+        | summarize n = dcount(vehicle_id) by route_id, minute_bucket = bin(ingestion_timestamp, 1m)
+        | summarize affected_vehicles = toint(max(n)) by route_id;
+    // trend: latest minute vs an earlier one
+    let current_avg = at_route_minute_agg
+        | where minute_bucket == now_bucket - 1m
+        | project route_id, current_delay = avg_delay_seconds;
+    let previous_avg = at_route_minute_agg
+        | where minute_bucket == now_bucket - (1 + trend_diff_threshold) * 1m
+        | project route_id, prev_delay = avg_delay_seconds;
+    all_routes
+    | extend minutes_since_last_seen = datetime_diff('minute', now_bucket, last_seen)
+    | join kind=leftouter streaks on route_id
+    | join kind=leftouter affected_now on route_id
+    | join kind=leftouter current_avg on route_id
+    | join kind=leftouter previous_avg on route_id
+    | extend is_stale = minutes_since_last_seen > freshness_threshold
+    | extend consecutive_delayed_readings = coalesce(consecutive_delayed_readings, 0)
+    | extend affected_vehicles = coalesce(affected_vehicles, 0)
+    | extend avg_delay_seconds = coalesce(avg_delay_seconds, 0.0)
+    | extend delay_diff = coalesce(current_delay, avg_delay_seconds) - coalesce(prev_delay, avg_delay_seconds)
+    | extend trend = case(
+        is_stale, "sin_datos",
+        isnull(prev_delay), "estable",
+        delay_diff > trend_delta, "empeorando",
+        delay_diff < -trend_delta, "mejorando",
+        "estable")
+    | extend trend_bonus = case(
+        trend == "empeorando", bonus_worsening,
+        trend == "mejorando", bonus_improving,
+        bonus_stable)
+    | extend clamped_avg_delay = max_of(avg_delay_seconds, 0.0)   // early buses must not lower severity below 0
+    | extend magnitude_component = w_magnitude * min_of(clamped_avg_delay / delay_cap, 1.0)
+    | extend amplitude_component = w_amplitude * min_of(todouble(affected_vehicles) / vehicles_cap, 1.0)
+    | extend trend_component = w_trend * trend_bonus
+    | extend severity_score = iff(is_stale, 0.0, magnitude_component + amplitude_component + trend_component)
+    | extend alert_level = case(
+        is_stale, "sin_datos",
+        consecutive_delayed_readings >= min_roja, "roja",
+        consecutive_delayed_readings >= min_naranja, "naranja",
+        consecutive_delayed_readings >= min_amarilla, "amarilla",
+        consecutive_delayed_readings >= min_advertencia, "advertencia",
+        "ninguna")
+    | extend is_active = alert_level != "ninguna" and alert_level != "sin_datos"
+    | extend signals_breakdown = pack(
+        "magnitude", round(magnitude_component, 3),
+        "amplitude", round(amplitude_component, 3),
+        "trend", round(trend_component, 3),
+        "trend_label", trend,
+        "consecutive_readings", consecutive_delayed_readings,
+        "minutes_since_last_seen", minutes_since_last_seen)
+    | project route_id, avg_delay_seconds, affected_vehicles, trend, severity_score,
+              signals_breakdown, alert_level, is_active, last_seen
+}

@@ -1,0 +1,14 @@
+// Average delay per route and minute, without frozen trips.
+// The 5m literal mirrors stale_trip_threshold_minutes: update both together.
+// `affected_vehicles` here is only for quick checks; the severity function
+// recounts it from live data with the configurable threshold.
+.create materialized-view at_route_minute_agg on table at_stop_updates_raw
+{
+    at_stop_updates_raw
+    | where isnull(todatetime(feed_timestamp))
+        or ingestion_timestamp - todatetime(feed_timestamp) <= 5m
+    | summarize
+        avg_delay_seconds = avg(arrival_delay_seconds),
+        affected_vehicles = dcountif(vehicle_id, arrival_delay_seconds >= 60 and isnotempty(vehicle_id))
+      by route_id, minute_bucket = bin(ingestion_timestamp, 1m)
+}
